@@ -1,3 +1,4 @@
+import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 
 import 'task.dart';
@@ -16,31 +17,36 @@ class _TaskIndexScreenState extends State<TaskIndexScreen> {
   final _tasks = <Task>[];
 
   TaskOrder _order = TaskOrder.asc;
-  bool _isLoading = false;
   bool _hasMore = true;
+  CancelableOperation<List<Task>>? _fetchTasksOperation;
+
+  bool get _isLoading => switch (_fetchTasksOperation) {
+        final op? when !op.isCompleted && !op.isCanceled => true,
+        _ => false,
+      };
 
   Future<void> _loadMore() async {
     if (_isLoading || !_hasMore) {
       return;
     }
 
-    _isLoading = true;
-
-    final lastTask = _tasks.lastOrNull;
-    final tasks = await widget.repository.fetchPage(
-      lastTask: lastTask,
-      order: _order,
+    final op = _fetchTasksOperation = CancelableOperation.fromFuture(
+      widget.repository.fetchPage(
+        lastTask: _tasks.isNotEmpty ? _tasks.last : null,
+        order: _order,
+      ),
     );
 
-    _isLoading = false;
-    setState(() {
-      _tasks.addAll(tasks);
-      _hasMore = tasks.isNotEmpty;
-    });
+    return op.then((tasks) {
+      setState(() {
+        _tasks.addAll(tasks);
+        _hasMore = tasks.isNotEmpty;
+      });
+    }).valueOrCancellation();
   }
 
   Future<void> _refresh() async {
-    _isLoading = false;
+    _fetchTasksOperation?.cancel();
     setState(() {
       _tasks.clear();
       _hasMore = true;
