@@ -18,6 +18,7 @@ class _TaskIndexScreenState extends State<TaskIndexScreen> {
   TaskOrder _order = TaskOrder.asc;
   bool _isLoading = false;
   bool _hasMore = true;
+  int _revision = 0;
 
   Future<void> _loadMore() async {
     if (_isLoading || !_hasMore) {
@@ -26,6 +27,8 @@ class _TaskIndexScreenState extends State<TaskIndexScreen> {
 
     _isLoading = true;
 
+    final revision = _revision;
+
     final lastTask = _tasks.lastOrNull;
     final tasks = await widget.repository.fetchPage(
       lastTask: lastTask,
@@ -33,6 +36,11 @@ class _TaskIndexScreenState extends State<TaskIndexScreen> {
     );
 
     _isLoading = false;
+
+    if (revision != _revision) {
+      return;
+    }
+
     setState(() {
       _tasks.addAll(tasks);
       _hasMore = tasks.isNotEmpty;
@@ -40,6 +48,7 @@ class _TaskIndexScreenState extends State<TaskIndexScreen> {
   }
 
   Future<void> _refresh() async {
+    _revision++;
     _isLoading = false;
     setState(() {
       _tasks.clear();
