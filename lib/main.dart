@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:infinite_scroll/task_repository.dart';
+
+import 'task_index_screen.dart';
 
 void main() {
-  runApp(const MainApp());
+  runApp(const App());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class App extends StatefulWidget {
+  const App({super.key});
+
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> {
+  final _taskRepository = TaskRepository();
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.light(useMaterial3: true),
+      darkTheme: ThemeData.dark(useMaterial3: true),
+      home: TaskIndexScreen(repository: _taskRepository),
     );
   }
 }
