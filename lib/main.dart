@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:infinite_scroll/task_repository.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'task_index_screen.dart';
 
 void main() {
-  runApp(const App());
+  runApp(
+    const ProviderScope(
+      child: App(),
+    ),
+  );
 }
 
-class App extends StatefulWidget {
+class App extends StatelessWidget {
   const App({super.key});
-
-  @override
-  State<App> createState() => _AppState();
-}
-
-class _AppState extends State<App> {
-  final _taskRepository = TaskRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +20,7 @@ class _AppState extends State<App> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData.light(useMaterial3: true),
       darkTheme: ThemeData.dark(useMaterial3: true),
-      home: TaskIndexScreen(repository: _taskRepository),
+      home: const TaskIndexScreen(),
     );
   }
 }

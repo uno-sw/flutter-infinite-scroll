@@ -1,61 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'task.dart';
+import 'tasks_provider.dart';
 import 'task_repository.dart';
 
-class TaskIndexScreen extends StatefulWidget {
-  const TaskIndexScreen({super.key, required this.repository});
-
-  final TaskRepository repository;
+class TaskIndexScreen extends ConsumerStatefulWidget {
+  const TaskIndexScreen({super.key});
 
   @override
-  State<TaskIndexScreen> createState() => _TaskIndexScreenState();
+  ConsumerState<TaskIndexScreen> createState() => _TaskIndexScreenState();
 }
 
-class _TaskIndexScreenState extends State<TaskIndexScreen> {
-  final _tasks = <Task>[];
-
+class _TaskIndexScreenState extends ConsumerState<TaskIndexScreen> {
   TaskOrder _order = TaskOrder.asc;
-  bool _isLoading = false;
-  bool _hasMore = true;
-
-  Future<void> _loadMore() async {
-    if (_isLoading || !_hasMore) {
-      return;
-    }
-
-    _isLoading = true;
-
-    final lastTask = _tasks.lastOrNull;
-    final tasks = await widget.repository.fetchPage(
-      lastTask: lastTask,
-      order: _order,
-    );
-
-    _isLoading = false;
-    setState(() {
-      _tasks.addAll(tasks);
-      _hasMore = tasks.isNotEmpty;
-    });
-  }
-
-  Future<void> _refresh() async {
-    _isLoading = false;
-    setState(() {
-      _tasks.clear();
-      _hasMore = true;
-    });
-    await _loadMore();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMore();
-  }
+  int _currentPage = 1;
 
   @override
   Widget build(BuildContext context) {
+    final pages = <List<Task>>[];
+    var hasMore = true;
+
+    for (var i = 0; i < _currentPage; i++) {
+      final lastPage = pages.lastOrNull;
+      final page = ref.watch(
+          tasksPageProvider(lastTask: lastPage?.lastOrNull, order: _order));
+      if (page case AsyncValue(:final value?)) {
+        if (value.isNotEmpty) {
+          pages.add(value);
+        } else {
+          hasMore = false;
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tasks'),
@@ -65,16 +46,20 @@ class _TaskIndexScreenState extends State<TaskIndexScreen> {
             onChanged: (order) {
               setState(() {
                 _order = order;
+                _currentPage = 1;
               });
-              _refresh();
             },
           ),
         ],
       ),
       body: TaskListView(
-        tasks: _tasks,
-        onScrollToEnd: _loadMore,
-        hasMore: _hasMore,
+        tasks: pages.expand((page) => page).toList(),
+        onScrollToEnd: () {
+          if (pages.length == _currentPage && hasMore) {
+            setState(() => _currentPage++);
+          }
+        },
+        hasMore: hasMore,
       ),
     );
   }
