@@ -1,14 +1,12 @@
-import 'package:flutter/foundation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-@immutable
-class Task {
-  const Task({
-    required this.id,
-    required this.name,
-    required this.completed,
-  });
+part 'task.freezed.dart';
 
-  final String id;
-  final String name;
-  final bool completed;
+@freezed
+class Task with _$Task {
+  const factory Task({
+    required String id,
+    required String name,
+    required bool completed,
+  }) = _Task;
 }
