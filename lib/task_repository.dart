@@ -1,4 +1,11 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import 'task.dart';
+
+part 'task_repository.g.dart';
+
+@riverpod
+TaskRepository taskRepository(TaskRepositoryRef ref) => TaskRepository();
 
 class TaskRepository {
   final List<Task> _tasks = List.generate(
