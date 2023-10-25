@@ -1,64 +1,83 @@
+// ignore_for_file: body_might_complete_normally_nullable
+
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'task.dart';
 import 'tasks_provider.dart';
 import 'task_repository.dart';
 
-class TaskIndexScreen extends ConsumerStatefulWidget {
+typedef UseTasksResult = ({
+  List<Task> tasks,
+  VoidCallback loadMore,
+  bool hasMore,
+});
+
+UseTasksResult useTasks({required WidgetRef ref, required TaskOrder order}) {
+  final currentPage = useState(1);
+
+  useEffect(() {
+    currentPage.value = 1;
+  }, [order]);
+
+  final pages = <List<Task>>[];
+  var hasMore = true;
+
+  for (var i = 0; i < currentPage.value; i++) {
+    final lastPage = pages.lastOrNull;
+    final page = ref
+        .watch(tasksPageProvider(lastTask: lastPage?.lastOrNull, order: order));
+    if (page case AsyncValue(:final value?)) {
+      if (value.isNotEmpty) {
+        pages.add(value);
+      } else {
+        hasMore = false;
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+
+  final loadMore = useCallback(() {
+    if (currentPage.value == pages.length && hasMore) {
+      currentPage.value++;
+    }
+  }, [currentPage.value, pages.length, hasMore]);
+
+  return (
+    tasks: pages.expand((page) => page).toList(),
+    loadMore: loadMore,
+    hasMore: hasMore,
+  );
+}
+
+class TaskIndexScreen extends HookConsumerWidget {
   const TaskIndexScreen({super.key});
 
   @override
-  ConsumerState<TaskIndexScreen> createState() => _TaskIndexScreenState();
-}
-
-class _TaskIndexScreenState extends ConsumerState<TaskIndexScreen> {
-  TaskOrder _order = TaskOrder.asc;
-  int _currentPage = 1;
-
-  @override
-  Widget build(BuildContext context) {
-    final pages = <List<Task>>[];
-    var hasMore = true;
-
-    for (var i = 0; i < _currentPage; i++) {
-      final lastPage = pages.lastOrNull;
-      final page = ref.watch(
-          tasksPageProvider(lastTask: lastPage?.lastOrNull, order: _order));
-      if (page case AsyncValue(:final value?)) {
-        if (value.isNotEmpty) {
-          pages.add(value);
-        } else {
-          hasMore = false;
-          break;
-        }
-      } else {
-        break;
-      }
-    }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final order = useState(TaskOrder.asc);
+    final (
+      :tasks,
+      :loadMore,
+      :hasMore,
+    ) = useTasks(ref: ref, order: order.value);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tasks'),
         actions: [
           TaskSortButton(
-            value: _order,
-            onChanged: (order) {
-              setState(() {
-                _order = order;
-                _currentPage = 1;
-              });
-            },
+            value: order.value,
+            onChanged: (value) => order.value = value,
           ),
         ],
       ),
       body: TaskListView(
-        tasks: pages.expand((page) => page).toList(),
-        onScrollToEnd: () {
-          if (pages.length == _currentPage && hasMore) {
-            setState(() => _currentPage++);
-          }
-        },
+        tasks: tasks,
+        onScrollToEnd: loadMore,
         hasMore: hasMore,
       ),
     );
